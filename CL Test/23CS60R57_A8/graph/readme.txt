@@ -1,0 +1,1 @@
+gcc graph_program.c  -mcmodel=medium -lpthread

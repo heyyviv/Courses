@@ -1,0 +1,13 @@
+Experiment Setup:
+	As it was given in the question, firstly I inserted the WikipediaURL and DONE_OR_NOT_DONE as 0 for randomly sampled 10 olympic games from 1968 to 2020.
+	Then I called os.system("python3 scraper.py&") three times. After that I am calling os.system("python3 checker.py&") once. This will run the scraper.py three times in the background along with checker.py in the background.
+	This will allow us to update the tables parallelly.
+
+Result:
+	Some of the execution time by running multiple processes: 6.06s, 6.94s, 7.46s, 6.90s, 6.87s
+	The average execution time by running multiple processes(Tm): 6.55s
+	
+	Now some of the execution time when ran by single process: 14.25s, 15.59s, 15.90s, 13.02s, 15.58s
+	The average execution time by running single process(Ts): 14.648s
+	
+	Now the speedup by running multiple processes((Ts/Tm)*100): 220.51%
