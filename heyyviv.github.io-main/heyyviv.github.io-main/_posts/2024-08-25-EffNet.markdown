@@ -1,0 +1,167 @@
+---
+layout: post
+title: "EfficientNet"
+date: 2024-08-26 01:43:18 +0530
+categories: Deep Learning
+---
+
+Model scaling can be achieved in three ways: by increasing model depth, width, or image resolution.
+
+- Depth (d): Scaling network depth is the most commonly used method. The idea is simple, deeper ConvNet captures richer and more complex features and also generalizes better. However, this solution comes with a problem, the vanishing gradient problem
+
+- Width (w):  This is used in smaller models. Widening a model allows it to capture more fine-grained features. However, extra-wide models are unable to capture higher-level features.
+
+- Image resolution (r): Higher resolution images enable the model to capture more fine-grained patterns. Previous models used 224 x 224 size images, and newer models tend to use a higher resolution. However, higher resolution also leads to increased computation requirements.
+
+As we have seen, scaling a model has been a go-to method, but it comes with overhead computation costs. Here is why
+
+- More Parameters: Increasing depth (adding layers) or width (adding channels within convolutional layers) leads to a significant increase in the number of parameters in the network. Each parameter requires computation during training and prediction. More parameters translate to more calculations, increasing the overall computational burden.
+
+- Moreover, scaling also leads to Memory Bottleneck as larger models with more parameters require more memory to store the model weights and activations during processing.
+
+What is Compound Scaling?
+
+High-resolution images require deeper networks to capture large-scale features with more pixels. Additionally, wider networks are needed to capture the finer details present in these high-resolution images. To pursue better accuracy and efficiency, it is critical to balance all dimensions of network width, depth, and resolution during ConvNet scaling
+
+However, scaling CNNs using particular ratios yields a better result. This is what compound scaling does
+
+![EffNet](/assets/effnet_1.jpg)
+
+ 
+The compound scaling coefficient method uniformly scales all three dimensions (depth, width, and resolution) in a proportional manner using a predefined compound coefficient ɸ.
+
+Here is the mathematical expression for the compound scaling method:
+
+![EffNet](/assets/effnet_2.jpg)
+
+
+α: Scaling factor for network depth (typically between 1 and 2)
+β: Scaling factor for network width (typically between 1 and 2)
+γ: Scaling factor for image resolution (typically between 1 and 1.5)
+ɸ (phi): Compound coefficient (positive integer) that controls the overall scaling factor.
+
+This equation tells us how much to scale the model (depth, width, resolution) which yields maximum performance.
+
+Benefits of Compound Scaling
+- Optimal Resource Utilization: By scaling all three dimensions proportionally, EfficientNet avoids the limitations of single-axis scaling (vanishing gradients or saturation).
+- Flexibility: The predefined coefficients allow for creating a family of EfficientNet models (B0, B1, B2, etc.) with varying capacities. Each model offers a different accuracy-efficiency trade-off, making them suitable for diverse applications.
+- Efficiency Gains: Compared to traditional scaling, compound scaling achieves similar or better accuracy with significantly fewer parameters and FLOPs (FLoating-point Operations Per Second), making them ideal for resource-constrained devices.
+
+EfficientNet Architecture
+
+EfficientNet-B0, discovered through Neural Architectural Search (NAS) is the baseline model. The main components of the architecture are:
+
+- MBConv block (Mobile Inverted Bottleneck Convolution)
+- Squeeze-and-excitation optimization
+
+![EffNet](/assets/effnet_3.jpg)
+The MBConv block is an evolved inverted residual block inspired by MobileNetv2
+Residual networks (ResNets) are a type of CNN architecture that addresses the vanishing gradient problem, as the network gets deeper, the gradient diminishes. ResNets solves this problem and allows for training very deep networks. This is achieved by adding the original input to the output of the transformation applied by the layer, improving gradient flow through the network.
+
+What is an inverted residual block?
+In residual blocks used in ResNets, the main pathway involves convolutions that reduce the dimensionality of the input feature map. A shortcut or residual connection then adds the original input to the output of this convolutional pathway. This process allows the gradients to flow through the network more freely.
+
+However, an inverted residual block starts by expanding the input feature map into a higher-dimensional space using a 1×1 convolution then applies a depthwise convolution in this expanded space and finally uses another 1×1 convolution that projects the feature map back to a lower-dimensional space, the same as the input dimension. The “inverted” aspect comes from this expansion of dimensionality at the beginning of the block and reduction at the end, which is opposite to the traditional approach where expansion happens towards the end of the residual block
+
+![EffNet](/assets/effnet_4.jpg)
+
+What is Squeeze-and-Excitation?
+Squeeze-and-Excitation (SE) simply allows the model to emphasize useful features, and suppress the less useful ones. We perform this in two steps:
+- Squeeze: This phase aggregates the spatial dimensions (width and height) of the feature maps across each channel into a single value, using global average pooling. This results in a compact feature descriptor that summarizes the global distribution for each channel, reducing each channel to a single scalar value.
+- Excitation:  In this step, the model using a full-connected layer applied after the squeezing step, produces a collection of per channel weight (activations or scores). The final step is to apply these learned importance scores to the original input feature map, channel-wise, effectively scaling each channel by its corresponding score.
+
+![EffNet](/assets/effnet_5.jpg)
+
+# Squeeze-and-Excitation (SE) Block
+
+A **Squeeze-and-Excitation (SE)** block helps neural networks recalibrate channel-wise feature responses, focusing on the most informative parts of the feature map.
+
+## Steps of the SE Block
+
+1. **Input Feature Map**  
+   - The input feature map has dimensions \( H \times W \times C \), where:
+     - \( H \) = height
+     - \( W \) = width
+     - \( C \) = number of channels
+
+2. **Squeeze Step (Global Average Pooling)**  
+   - Apply **global average pooling** on each channel, reducing the spatial dimensions \( H \times W \) to \( 1 \times 1 \times C \). This generates a vector summarizing each channel’s information across the spatial dimensions.
+    $$
+   \[
+   z_c = \frac{1}{H \times W} \sum_{i=1}^{H} \sum_{j=1}^{W} x_{ijc}
+   \]
+   Where \( z_c \) is the pooled value for channel \( c \).
+   $$
+
+3. **Excitation Step (Fully Connected Layers)**  
+   - The pooled vector passes through two fully connected (FC) layers:
+     - **First FC Layer**: Reduces dimensionality to \( 1 \times 1 \times \frac{C}{r} \) (using a reduction ratio \( r \)).
+     - **Second FC Layer**: Restores dimensionality back to \( 1 \times 1 \times C \).
+   - Apply a **ReLU** activation between the two layers and a **sigmoid** activation after the second FC layer to produce a vector of weights.
+   $$
+
+   \[
+   s = \sigma(W_2 \cdot \text{ReLU}(W_1 \cdot z))
+   \]
+   $$
+
+4. **Recalibration (Channel-wise Scaling)**  
+   - Multiply the original input feature map by the learned weights from the Excitation step. Each channel of the feature map is scaled by its corresponding weight:
+    $$
+   \[
+   \hat{x}_{ijc} = s_c \cdot x_{ijc}
+   \]
+   $$
+
+5. **Final Output**  
+   - The recalibrated feature map has the same dimensions \( H \times W \times C \) as the input, but important channels are enhanced while less important ones are suppressed.
+
+
+This process allows the network to emphasize more relevant features and diminish less important ones, dynamically adjusting the feature maps based on the learned content of the input images.
+
+# Activation Functions in EfficientNet
+
+EfficientNet primarily uses two activation functions: **Swish** and **Sigmoid**, each playing a role in different parts of the architecture.
+
+## 1. Swish Activation
+
+- **Formula**: 
+$$
+  \[
+  \text{Swish}(x) = x \cdot \sigma(x) = \frac{x}{1 + e^{-x}}
+  \]
+  where \( \sigma(x) \) is the sigmoid function.
+$$
+- **Where it's used**:  
+  Swish is applied after the convolutional layers in the **MBConv blocks** (Mobile Inverted Bottleneck Convolution layers). It helps with better gradient flow and performance compared to traditional activations like ReLU.
+
+- **Why Swish?**  
+  - **Smooth gradient**: Swish has a smooth, non-monotonic curve, allowing for better gradient flow during training.
+  - **Performance**: It has been empirically shown to improve accuracy on tasks like ImageNet classification.
+
+---
+
+## 2. Sigmoid Activation
+$$
+- **Formula**: 
+  \[
+  \sigma(x) = \frac{1}{1 + e^{-x}}
+  \]
+$$
+
+- **Where it's used**:  
+  Sigmoid is used within the **Squeeze-and-Excitation (SE) block**. After the excitation step (fully connected layers), the sigmoid function generates channel-wise weights that are used to scale the input feature maps.
+
+- **Why Sigmoid?**  
+  - **Channel recalibration**: The sigmoid function outputs values between 0 and 1, which are ideal for scaling each channel in the SE block, helping the model focus on the most important features.
+
+---
+
+## Summary of Activations in EfficientNet:
+- **Swish**: Used after most convolutional layers (primarily in MBConv blocks).
+- **Sigmoid**: Used in the SE block for recalibrating the feature map channels.
+
+These activations contribute to EfficientNet's ability to balance computational efficiency and high accuracy.
+
+![EffNet](/assets/effnet_7.jpg)
+

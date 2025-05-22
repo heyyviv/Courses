@@ -1,0 +1,225 @@
+---
+layout: post
+title: "Convolutional Neural Networks"
+date: 2024-08-24 01:43:18 +0530
+categories: Deep Learning
+---
+
+
+
+![CNN](/assets/CNN_1.jpg)
+![CNN](/assets/CNN_2.jpg)
+![CNN](/assets/CNN_3.jpg)
+![CNN](/assets/CNN_4.jpg)
+
+In general, common to see CONV layers with stride 1,filters of size FxF, and zero-padding with (F-1)/2. (will
+preserve size spatially)
+Remember back to… E.g. 32x32 input convolved repeatedly with 5x5 filters shrinks volumes spatially!
+(32 -> 28 -> 24 ...). Shrinking too fast is not good, doesn’t work well.
+
+![CNN](/assets/CNN_5.jpg)
+![CNN](/assets/CNN_6.jpg)
+![CNN](/assets/CNN_7.jpg)
+![CNN](/assets/CNN_8.jpg)
+![CNN](/assets/CNN_9.jpg)
+![CNN](/assets/CNN_10.jpg)
+
+Convolutional networks are simply neural networks that use convolution in place of general matrix multiplication in at least one of 
+their layers.
+Convolution leverages three important ideas that can help improve a machine
+learning system: sparse interactions parameter sharing equivariant representa-, and
+tions. Moreover, convolution provides a means for working with inputs of variable
+size. We now describe each of these ideas in turn.
+Traditional neural network layers use matrix multiplication by a matrix of
+parameters with a separate parameter describing the interaction between each
+input unit and each output unit. This means every output unit interacts with every
+input unit. Convolutional networks, however, typically have sparse interactions
+(also referred to as sparse connectivity sparse weightsor ). This is accomplished by
+making the kernel smaller than the input. For example, when processing an image,
+the input image might have thousands or millions of pixels, but we can detect small,
+meaningful features such as edges with kernels that occupy only tens or hundreds of
+pixels. This means that we need to store fewer parameters, which both reduces the
+memory requirements of the model and improves its statistical efficiency. It also
+means that computing the output requires fewer operations. These improvements
+in efficiency are usually quite large. If there are m inputs and n outputs, then
+matrix multiplication requires m n× parameters and the algorithms used in practice
+have O(m n× ) runtime (per example). If we limit the number of connections
+each output may have to k, then the sparsely connected approach requires only
+k n× parameters and O(k n× ) runtime.
+
+Parameter sharing refers to using the same parameter for more than one
+function in a model. In a traditional neural net, each element of the weight matrix
+is used exactly once when computing the output of a layer. It is multiplied by one
+element of the input and then never revisited. As a synonym for parameter sharing,
+one can say that a network has tied weights, because the value of the weight applied
+to one input is tied to the value of a weight applied elsewhere. In a convolutional
+neural net, each member of the kernel is used at every position of the input (except
+perhaps some of the boundary pixels, depending on the design decisions regarding
+the boundary). The parameter sharing used by the convolution operation means
+that rather than learning a separate set of parameters for every location, we learn
+only one set. This does not affect the runtime of forward propagation—it is still
+O(k n× )—but it does further reduce the storage requirements of the model to
+k parameters. Recall that k is usually several orders of magnitude less than m.
+Since m and n are usually roughly the same size, k is practically insignificant
+compared to m n× . Convolution is thus dramatically more efficient than dense
+matrix multiplication in terms of the memory requirements and statistical efficiency.
+
+In the case of convolution, the particular form of parameter sharing causes the
+layer to have a property called equivariance to translation. To say a function is
+equivariant means that if the input changes, the output changes in the same way.
+Specifically, a function f(x) is equivariant to a function g if f (g(x)) = g(f(x)).
+In the case of convolution, if we let g be any function that translates the input,
+i.e., shifts it, then the convolution function is equivariant to g. For example, let I
+be a function giving image brightness at integer coordinates. Let g be a function
+mapping one image function to another image function, such that I = g(I ) is
+the image function with I(x, y) = I(x − 1, y). This shifts every pixel of I one
+unit to the right. If we apply this transformation to I , then apply convolution,
+the result will be the same as if we applied convolution to I, then applied the
+transformation g to the output. When processing time series data, this means
+that convolution produces a sort of timeline that shows when different features
+appear in the input. If we move an event later in time in the input, the exact
+same representation of it will appear in the output, just later in time. Similarly
+with images, convolution creates a 2-D map of where certain features appear in
+the input. If we move the object in the input, its representation will move the
+same amount in the output. This is useful for when we know that some function
+of a small number of neighboring pixels is useful when applied to multiple input
+locations. For example, when processing images, it is useful to detect edges in
+the first layer of a convolutional network. The same edges appear more or less
+everywhere in the image, so it is practical to share parameters across the entire
+image. In some cases, we may not wish to share parameters across the entire
+image. For example, if we are processing images that are cropped to be centered
+on an individual’s face, we probably want to extract different features at different
+locations—the part of the network processing the top of the face needs to look for
+eyebrows, while the part of the network processing the bottom of the face needs to
+look for a chin.
+
+Pooling
+
+A typical layer of a convolutional network consists of three stages (see Fig. ). In9.7
+the first stage, the layer performs several convolutions in parallel to produce a set
+of linear activations. In the second stage, each linear activation is run through a
+nonlinear activation function, such as the rectified linear activation function. This
+stage is sometimes called the detector stage. In the third stage, we use a pooling
+function to modify the output of the layer further.
+A pooling function replaces the output of the net at a certain location with
+a summary statistic of the nearby outputs. For example, the max pooling (Zhou
+and Chellappa 1988, ) operation reports the maximum output within a rectangular
+neighborhood. Other popular pooling functions include the average of a rectangular
+neighborhood, the L2 norm of a rectangular neighborhood, or a weighted average
+based on the distance from the central pixel.
+In all cases, pooling helps to make the representation become approximately
+invariant to small translations of the input. Invariance to translation means that if
+we translate the input by a small amount, the values of most of the pooled outputs
+do not change.
+Invariance to local translation can be a very useful property if we care more about
+whether some feature is present than exactly where it is. For example,
+when determining whether an image contains a face, we need not know the location
+of the eyes with pixel-perfect accuracy, we just need to know that there is an eye on
+the left side of the face and an eye on the right side of the face.
+Pooling over spatial regions produces invariance to translation, but if we pool
+over the outputs of separately parametrized convolutions, the features can learn
+which transformations to become invariant to.
+
+Because pooling summarizes the responses over a whole neighborhood, it is
+possible to use fewer pooling units than detector units, by reporting summary
+statistics for pooling regions spaced k pixels apart rather than 1 pixel apart. See
+Fig. for an example. This improves the computational efficiency of the network9.10
+because the next layer has roughly k times fewer inputs to process. When the
+number of parameters in the next layer is a function of its input size (such as
+when the next layer is fully connected and based on matrix multiplication) this
+reduction in the input size can also result in improved statistical efficiency and
+reduced memory requirements for storing the parameters.
+
+Max Pooling– It’s the most popular pooling layer because it uses the input feature map’s pooling regions to get the values that are the highest overall. With the help of max pooling, we may minimize the amount of input without losing the most crucial details.
+
+Max Pooling is advantageous because it adds translation invariance. There are following types of it
+- Shift Invariance(Invariance in Position)
+- Rotational Invariance(Invariance in Rotation)
+- Scale Invariance(Invariance in Scale(small or big))
+
+Max pooling selects the brighter pixels from the image. It is useful when the background of the image is dark and we are interested in only the lighter pixels of the image.
+
+
+Average Pooling– The average value from each pooling area in the input feature map is used for this operation. When input characteristics are noisy, average pooling may assist in smoothing them out.
+
+Average pooling method smooths out the image and hence the sharp features may not be identified when this pooling method is used.
+
+![CNN](/assets/CNN_11.jpg)
+
+Need a simple network that will fire regardless of the location of “Welcome”  and not fire when there is none
+![CNN](/assets/CNN_12.jpg)
+Need a network that will “fire” regardless of the precise location of the target object
+
+In many problems the location of a pattern is not important – Only the presence of the pattern
+• Conventional MLPs are sensitive to the location of the pattern – Moving it by one component results in an entirely different input that the MLP won’t recognize
+• Requirement: Network must be shift invariant
+
+![CNN](/assets/CNN_13.jpg)
+
+“Does welcome occur in this recording?” – We have classified many “windows” individually– “Welcome” may have occurred in any of them
+
+![CNN](/assets/CNN_14.jpg)
+
+In a regular MLP every neuron in a layer is connected by a unique weight to every unit in the previous layer – All entries in the weight matrix are unique – The weight matrix is (generally) full
+
+In a scanning MLP each neuron is connected to a subset of neurons in the previous layer 
+– The weights matrix is sparse
+– The weights matrix is block structured with identical blocks 
+– The network is a shared parameter model
+
+These are shared parameter networks
+– All lower-level subnets are identical
+• Are all searching for the same pattern 
+– Any update of the parameters of one copy of the subnet must equally update all copies
+
+![CNN](/assets/CNN_15.jpg)
+
+![CNN](/assets/CNN_16.jpg)
+
+Internal Covariate Shift is the change in the distribution of network activations due to the change in network parameters during training.
+The deeper your network, the more tangled of a mess internal covariate shift can cause. Let’s remember that Neural Networks learn and 
+adjust their weights through a mathematical game of telephone (the more people, or ‘layers’ put in the chain, the more messed up the 
+message is going to get). As builders of neural networks, our job is to stabilize and improve the connection between our output layer’s
+results, and each hidden layers’ nodes.
+
+![CNN](/assets/CNN_17.jpg)
+
+Problem: What if zero-mean, unit variance is too hard of a constraint? 
+
+![CNN](/assets/CNN_18.jpg)
+
+![CNN](/assets/CNN_19.jpg)
+
+Batch Normalization
+Usually inserted after Fully Connected or Convolutional layers, and before nonlinearity.
+
+Pros
+- Makes deep networks much easier to train!
+- Allows higher learning rates, faster convergence
+- Networks become more robust to initialization
+- Acts as regularization during training
+- Zero overhead at test-time: can be fused with conv!
+
+Cons
+- Not well-understood theoretically (yet)
+- Behaves differently during training and testing: this is a very common source of bugs!
+
+
+Generalized Mean Pooling
+Generalized Mean Pooling (GeM) is a mathematical operation used in deep learning to compute the generalized mean of each channel in a 
+tensor. It is a generalization of the average pooling, which is commonly used in classification networks, and of spatial max-pooling 
+layer. By applying GeM, it is possible to increase the contrast of the pooled feature map and focus on the salient features of the image.
+
+![CNN](/assets/CNN_20.jpg)
+
+![CNN](/assets/CNN_21.jpg)
+
+Features of GeM
+The parameter p can be learned during the training process, which allows the model to adapt the pooling mechanism to better suit the dataset and task at hand. This adaptability can lead to improvements in model performance because the pooling layer can learn to focus on the most informative features.
+By the way, GeM will be max pooling when  p→∞, and will be average pooling when p=1
+
+
+
+
+
+

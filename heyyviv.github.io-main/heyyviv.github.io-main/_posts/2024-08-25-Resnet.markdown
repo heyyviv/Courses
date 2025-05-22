@@ -1,0 +1,85 @@
+---
+layout: post
+title: "ResNet"
+date: 2024-08-24 01:43:18 +0530
+categories: Deep Learning
+---
+
+Residual Network
+
+Every consecutive winning architecture uses more layers in a deep neural network to lower the error rate after the first CNN-based architecture (AlexNet) that won the ImageNet 2012 competition. This is effective for smaller numbers of layers, but when we add more layers, a typical deep learning issue known as the Vanishing/Exploding gradient arises. This results in the gradient becoming zero or being overly large. Therefore, the training and test error rate similarly increases as the number of layers is increased.
+
+Deep residual networks like the popular ResNet-50 model are a convolutional neural network (CNN) that is 50 layers deep. A Residual Neural Network (ResNet) is an Artificial Neural Network (ANN) of a kind that stacks residual blocks on top of each other to form a network
+
+ResNet has many variants that run on the same concept but have different numbers of pooling layers. Resnet50 is used to denote the variant that can work with 50 neural network layers
+
+As the number of layers of the neural network increases, the accuracy levels may get saturated and slowly degrade after a point. As a result, the performance of the model deteriorates both on the training and testing data.
+
+This degradation is not a result of overfitting. Instead, it may result from the initialization of the network, optimization function, or, more importantly, the problem of vanishing or exploding gradients.
+
+What are Skip Connections in ResNet?
+
+These skip connections work in two ways. Firstly, they alleviate the issue of vanishing gradient by setting up an alternate shortcut for the gradient to pass through. In addition, they enable the model to learn an identity function. This ensures that the higher layers of the model do not perform any worse than the lower layers.
+
+In short, the residual connection blocks make it considerably easier for the layers to learn identity functions. As a result, ResNet improves the efficiency of deep neural networks with more neural layers while minimizing the percentage of test errors. In other words, the skip connections add the outputs from previous layers to the outputs of stacked layers, making it possible to train much deeper networks than previously possible.
+
+What is ResNet 50?
+ResNet50 consists of 16 residual blocks, with each block consisting of several convolutional layers with residual connections. The architecture also includes pooling layers, fully connected layers, and a softmax output layer for classification.
+
+Architecture of ResNet50
+Input layer: The input layer of ResNet50 takes an image of size 224 x 224 x 3 as input. The 3 represents the RGB color channels of the image.
+
+![Inception](/assets/resnet_1.jpg)
+
+The first two layers of ResNet are the same as those of the GoogLeNet we described before: the 
+ 7x7 convolutional layer with 64 output channels and a stride of 2 is followed by the 3x3
+ max-pooling layer with a stride of 2. The difference is the batch normalization layer added after each convolutional layer in ResNet.
+
+![Inception](/assets/resnet_2.jpg)
+
+GoogLeNet uses four modules made up of Inception blocks. However, ResNet uses four modules made up of residual blocks, each of which uses several residual blocks with the same number of output channels. The number of channels in the first module is the same as the number of input channels. Since a max-pooling layer with a stride of 2 has already been used, it is not necessary to reduce the height and width. In the first residual block for each of the subsequent modules, the number of channels is doubled compared with that of the previous module, and the height and width are halved.
+
+Stage 1: first convolutional layer, which takes as input the raw image with dimensions (224, 224, 3) and outputs a feature map with dimensions (112, 112, 64). This layer uses 64 filters, each with a kernel size of (7, 7) and a stride of (2, 2) to downsample the input image by a factor of 2 in both the width and height dimensions. After the convolutional layer, a batch normalization layer is applied to normalize the activations, followed by a ReLU activation function to introduce nonlinearity. Finally, a max pooling layer with a pool size of (3, 3) and a stride of (2, 2) is applied to further downsample the feature map by a factor of 2 in both dimension
+
+This produces a feature map with dimensions (56, 56, 64), which serves as the input to the subsequent convolutional blocks in the ResNet50 architecture.
+
+![Inception](/assets/resnet_3.jpg)
+
+Stage 2: In this uses 9 Layers of convolutional layer followed by batch normalization and relu activation. As per above, you can see the identity block(connecting blue color lines from one to another block of convolutions). The output of the first stage is forwarded to the first layer of convolution with 64 kernel filters and a size of 1 * 1 o/p of this feed to 3 * 3  convolution size with the same 64 kernel filters, o/p this feed to conv. 1* 1 with 256 kernel filters. Now along with this, we create a skip connection/ residual connection, in which we pass the input(output from the max pool at stage 1) with size of image 56*56 to relu activation before the next convolution layers.
+
+![Inception](/assets/resnet_4.jpg)
+
+Stage 3: In this, 12 layers of convolutional layer followed by batch normalization and relu activation are used. Here Projection block used as the dimension of input and output is not the same, bypassing the first three layers convolutional layer, in the first layer convoluting with the size of kernel 1* 1 with 128 filters (stride=2)to downsample the input and to change the depth of the input to match the output followed by convolution of 3* 3, with, a same number of filters and conv. 1* 1, kernel filters=512. Further use 9 layers of convolution with 1* 1 , filters=128=>3* 3, filters=128 =>1* 1, filters=512. The output of these 12th layers with size of image 28*28 forwards to relu activation before stage 4.
+
+Stage4: In this stage uses 18 layers of convolution each followed by batch normalization and relu activation function. Output from relu activation has been forwarded to the first layer of the fourth stage where the dimension of image size is different so use projection block here in which input is forwarded to the convolution block to match the size of i/p with o/p at the second conv. block. The rest of the process remains the same as like previous stage convoluting layer by layer to understand more deep features of the image.
+
+Stage 5: In this stage uses 9 layers of convolution each followed by batch normalization and relu activation function. Output from relu activation has been forwarded to with size of image 14* 14 the first layer of the 5th stage where the dimension of image size is different so use projection block here in which input is forwarded to the convolution block to match the size of i/p with o/p at the second conv. block. The very first layer of the first convolutional block reducing the size of the image using 512 kernel filters with size of 1* 1(stride=2) followed by conv 3* 3 with 512 filters and conv. 1*1 with 2048 filters.
+
+Resisual Block
+ResNet has VGG’s full 3x3 convolutional layer design. The residual block has two 3x3 convolutional layers with the same number of output channels. Each convolutional layer is followed by a batch normalization layer and a ReLU activation function. Then, we skip these two convolution operations and add the input directly before the final ReLU activation function. This kind of design requires that the output of the two convolutional layers has to be of the same shape as the input, so that they can be added together. If we want to change the number of channels, we need to introduce an additional 1x1 convolutional layer to transform the input into the desired shape for the addition operation.
+
+{% highlight python %}
+class Residual(nn.Module):  #@save
+    """The Residual block of ResNet models."""
+    def __init__(self, num_channels, use_1x1conv=False, strides=1):
+        super().__init__()
+        self.conv1 = nn.LazyConv2d(num_channels, kernel_size=3, padding=1,
+                                   stride=strides)
+        self.conv2 = nn.LazyConv2d(num_channels, kernel_size=3, padding=1)
+        if use_1x1conv:
+            self.conv3 = nn.LazyConv2d(num_channels, kernel_size=1,
+                                       stride=strides)
+        else:
+            self.conv3 = None
+        self.bn1 = nn.LazyBatchNorm2d()
+        self.bn2 = nn.LazyBatchNorm2d()
+
+    def forward(self, X):
+        Y = F.relu(self.bn1(self.conv1(X)))
+        Y = self.bn2(self.conv2(Y))
+        if self.conv3:
+            X = self.conv3(X)
+        Y += X
+        return F.relu(Y)
+{% endhighlight %}
+
